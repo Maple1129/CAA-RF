@@ -1,17 +1,18 @@
-# CAA---RF
+# CAA--RF
 Model source code
-# 区块链
+# Blockchain
 
-NodeA,NodeB,.....NodeG 是区块链节点程序
+NodeA, NodeB, ... NodeG are blockchain node programs.
 
-# 数据集
+# Data set
 
-Net_Data是区块链系统网络流量异常行为数据集
+_Net_Data_ is a dataset of abnormal network traffic behaviors in blockchain systems.
 
-# 对比实验几种方法
+# Comparative experiments with several methods
 
-"对比实验几种方法"文件夹包含了Autoencoder，CIFAR-10，DBN，GANs，LSTM，RNN模型代码和CIFAR-10data本地数据集，以及运行的结果result文件夹
+The folder _Comparative Experiments on Several Methods_ contains model code for Autoencoder, CIFAR-10, DBN, GANs, LSTM, and RNN, along with a local CIFAR-10 dataset and a result folder containing runtime outcomes.
 
-# result文件夹
 
-存放模型运行的准确率结果，和使用结果绘图的代码
+# result folder
+
+Stores the accuracy results of model runs and the code for plotting the results.
