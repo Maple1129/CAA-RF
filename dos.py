@@ -10,7 +10,7 @@ import random
 import threading
 from collections import Counter
 
-'''模拟dos攻击'''
+
 
 class Blockchain:
     def __init__(self, oneself, interval, all_node):
@@ -24,13 +24,11 @@ class Blockchain:
         self.oneself = oneself
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         MAX_THREADS = len(all_node) - 1
-        self.server_socket.bind(self.all_node[oneself])  # 绑定套接字到主机端口，address为一个元组(‘0.0.0.0’, 12345)
-        self.server_socket.listen(MAX_THREADS)  # 监听客户端连接，参数为最大连接数量
-        # self.condition = threading.Condition()        # 用于输入发送信息，设置全局变量message使输入一次消息发送给全部
+        self.server_socket.bind(self.all_node[oneself])
+        self.server_socket.listen(MAX_THREADS)
 
-        # 随机数用来产生区块
-        self.chain = []  # 存块
-        self.current_transactions = []  # 交易实体
+        self.chain = []
+        self.current_transactions = []
         self.chain_hash_list = []
         self.random_dict = {}
         self.money = {}
@@ -45,17 +43,14 @@ class Blockchain:
     def node(self):
         miner = threading.Thread(target=self.mine)
         miner.start()
-        # for active_threads in range(len(self.lists_my)):
-        # 列表中有几个节点地址，就开几个线程接收数据
         send_handler = threading.Thread(target=self.data_recv)
         send_handler.start()
-        # 添加延时，使得循环不会过快地重新检查条件
         time.sleep(0.5)  # 调整这个时间以适应你的需求
 
     def menu(self):
         while True:
-            # 这个地方可以调整一下间隔时间
-            time.sleep(0.001)
+            # 这个地方可以调整一下攻击的间隔时间
+            time.sleep(0.0001)
             casual = random.randint(0, 100000)
             if(casual % 3 ==1):
                 transfer = threading.Thread(target=self.transfer, args=self.oneself)
@@ -114,7 +109,6 @@ class Blockchain:
                 print(chain_hash_list)
                 counter = Counter(chain_hash_list)
                 most_common_element, occurrence_count = counter.most_common(1)[0]
-                # print(f'most_common_element:{most_common_element}')
                 print(f'most_common_element:')
                 for hash in self.chain_hash_list:
                     if hash['chain_hash'] == most_common_element:
@@ -126,7 +120,6 @@ class Blockchain:
                         }
                         self.ready_send(message, message['recipient'])
                         break
-                # self.chain_hash_list.clear()  写在前面的if中
 
     def select_validator(self):
         # 按照质押金额比例随机选择验证者
@@ -142,8 +135,6 @@ class Blockchain:
             print("----无质押币----")
 
         print("开始挑选节点")
-        # 等待一会儿，收集信息
-        # 出块后清空 self.random_dict = {}
         while True:
             tim = int(time.time())
             time.sleep(0.3)
@@ -164,7 +155,7 @@ class Blockchain:
             random_average = sum([self.random_dict[node] for node in self.random_dict]) / len(self.random_dict)
         print(f'入选人数:{len(self.random_dict)},total_stake: {total_stake}')
 
-        # 这个平均数并不能保证每个人的概率一样，靠近0.5的概率高,所以在进行一次处理
+        # 二次处理
         random_average = self.hash_to_decimal(random_average)
         print(f'random_average:{random_average}')
 
@@ -183,10 +174,6 @@ class Blockchain:
         print(f'selected_node: {selected_node},给出块人{selected_node}利息:1')
         return selected_node
 
-    # def send_chain(self):
-    #     message = {'identifier': 50, 'chain': self.chain}
-    #     print("-----sending chain-----")
-    #     self.data_send_all(message)
 
     def new_block(self, validator, previous_hash=None):  # 新建区块
         if previous_hash is not None:
@@ -213,7 +200,6 @@ class Blockchain:
                 print("添加区块")
                 self.chain.append('xxxx')
                 continue
-        # self.chain.append(block)  # 把新建的区块加入链
         return block
 
     def transfer(self, oneself):
@@ -242,7 +228,6 @@ class Blockchain:
             'length': len(self.chain),
             'chain': self.chain,
         }
-        # print(f'length: {len(self.chain)}')
         pprint(self.chain, indent=4)
 
     def show_balance(self):
@@ -256,7 +241,6 @@ class Blockchain:
             ready_send.start()
 
     def ready_send(self, message, to_node):
-        '''noed:"A","B","C"'''
         message['is_correct'] = 1
         message = json.dumps(message)
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -502,6 +486,45 @@ class Blockchain:
         except Exception as e:
             print(f"vaild_chain: {e}")
 
+    def merkle_root(self, transactions):
+        print('merkle_root is running')
+        # 如果没有交易，则返回空字符串
+        if not transactions:
+            return ""
+
+        hash_list = []
+        # 对交易进行排序，确保每次生成相同的Merkle根
+        transactions = sorted(transactions, key=lambda transaction: transaction['timestamp'])
+        for transaction in transactions:
+            # 将交易内容按固定顺序排序并拼接成字符串
+            serialized_string = json.dumps(transaction)
+            # 计算哈希值
+            tx_hash = hashlib.sha256(serialized_string.encode()).hexdigest()
+            # 将哈希值添加到列表中
+            hash_list.append(tx_hash)
+        # 将交易哈希列表转换为字节形式的列表，以便进行哈希运算
+        transaction_hashes_bytes = [bytes.fromhex(hash) for hash in hash_list]
+        # 初始化Merkle树的层级
+        current_layer = transaction_hashes_bytes
+        while len(current_layer) > 1:
+            # 创建下一层级
+            next_layer = []
+            # 对于当前层级中的每一对哈希（包括处理奇数个的情况）
+            for i in range(0, len(current_layer), 2):
+                # 如果是奇数个，则复制最后一个哈希与自己配对
+                if i + 1 == len(current_layer):
+                    combined_hash = hashlib.sha256(transaction_hashes_bytes[i] + transaction_hashes_bytes[i]).digest()
+                else:
+                    combined_hash = hashlib.sha256(
+                        transaction_hashes_bytes[i] + transaction_hashes_bytes[i + 1]).digest()
+                # 将新的哈希添加到下一层级（以字节形式）
+                next_layer.append(combined_hash)
+            # 更新当前层级为下一层级
+            current_layer = next_layer
+        # 最后一层只剩下一个元素时，将其转换为十六进制字符串形式作为Merkle树根
+        merkle_root_hex = current_layer[0].hex()
+        return merkle_root_hex
+
     def new_transaction(self, timestamp, sender, recipient, amount):
         self.current_transactions.append({
             'timestamp': timestamp,
@@ -530,17 +553,11 @@ class Blockchain:
         return self.chain[-1]
 
     def hash_to_decimal(self, input_number, digits=10):
-        # 将数字转换为字符串，然后进行哈希计算
         hashed_str = hashlib.md5(str(input_number).encode()).hexdigest()
-
-        # 取哈希结果的前10位
         hashed_truncated = int(hashed_str, 16)
         hashed_str = str(hashed_truncated)[-digits:]
         decimal_value = float(hashed_str)
-
-        # 将这个整数转化为小数
         decimal_value = decimal_value / (10 ** digits)
-
         return decimal_value
 
     def random_item(self, dic_list):
@@ -554,54 +571,7 @@ class Blockchain:
         characters = string.ascii_letters + string.digits
         return ''.join(random.choice(characters) for _ in range(length))
 
-    def merkle_root(self, transactions):
-        print('merkle_root is running')
-        # 如果没有交易，则返回空字符串
-        if not transactions:
-            return ""
 
-        hash_list = []
-        # 对交易进行排序，确保每次生成相同的Merkle根
-        transactions = sorted(transactions, key=lambda transaction: transaction['timestamp'])
-        for transaction in transactions:
-            # 将交易内容按固定顺序排序并拼接成字符串
-            serialized_string = json.dumps(transaction)
-
-            # 计算哈希值
-            tx_hash = hashlib.sha256(serialized_string.encode()).hexdigest()
-
-            # 将哈希值添加到列表中
-            hash_list.append(tx_hash)
-
-        # 将交易哈希列表转换为字节形式的列表，以便进行哈希运算
-        transaction_hashes_bytes = [bytes.fromhex(hash) for hash in hash_list]
-
-        # 初始化Merkle树的层级
-        current_layer = transaction_hashes_bytes
-
-        while len(current_layer) > 1:
-            # 创建下一层级
-            next_layer = []
-
-            # 对于当前层级中的每一对哈希（包括处理奇数个的情况）
-            for i in range(0, len(current_layer), 2):
-                # 如果是奇数个，则复制最后一个哈希与自己配对
-                if i + 1 == len(current_layer):
-                    combined_hash = hashlib.sha256(transaction_hashes_bytes[i] + transaction_hashes_bytes[i]).digest()
-                else:
-                    combined_hash = hashlib.sha256(
-                        transaction_hashes_bytes[i] + transaction_hashes_bytes[i + 1]).digest()
-
-                # 将新的哈希添加到下一层级（以字节形式）
-                next_layer.append(combined_hash)
-
-            # 更新当前层级为下一层级
-            current_layer = next_layer
-
-        # 最后一层只剩下一个元素时，将其转换为十六进制字符串形式作为Merkle树根
-        merkle_root_hex = current_layer[0].hex()
-
-        return merkle_root_hex
 
 
 
@@ -610,15 +580,14 @@ class Blockchain:
 #              'E': ('127.0.0.1', 5), 'F': ('127.0.0.1', 6), 'G': ('127.0.0.1', 7), 'H': ('127.0.0.1', 8),
 #              'I': ('127.0.0.1', 9), 'J': ('127.0.0.1', 10), 'K': ('127.0.0.1', 11), 'L': ('127.0.0.1', 12),
 #              'M': ('127.0.0.1', 13), 'N': ('127.0.0.1', 14), 'P': ('127.0.0.1', 15), 'Q': ('127.0.0', 16)}
-# 这表关系到可以给谁发信息，与接受信息无关
 lists_all = {'A': ('127.0.0.1', 1), 'B': ('127.0.0.1', 2), 'C': ('127.0.0.1', 3), 'D': ('127.0.0.1', 4),
-             'E': ('127.0.0.1', 5), 'F': ('127.0.0.1', 6), 'G': ('127.0.0.1', 7)}# lists_all = {'A': ('127.0.0.1', 12), 'B': ('127.0.0.1', 42), 'C': ('127.0.0.1', 6)}
+             'E': ('127.0.0.1', 5), 'F': ('127.0.0.1', 6), 'G': ('127.0.0.1', 7)}
 lists_my = lists_all.copy()
 
 ONESELF = 'G'
 lists_my.pop(ONESELF)
 MAX_THREADS = len(lists_my)
-lists_all = {k: lists_all[k] for k in sorted(lists_all)}  # 排序
+lists_all = {k: lists_all[k] for k in sorted(lists_all)}
 list_keys = list(lists_my.keys())
 
 blockchain = Blockchain(oneself=ONESELF, interval=5, all_node=lists_all)

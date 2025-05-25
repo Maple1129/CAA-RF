@@ -10,7 +10,7 @@ import random
 import threading
 from collections import Counter
 
-'''区块链模型，以便程序调用和修改'''
+'''更换发送链的规则，发送每一个块'''
 class Collect:
     def __init__(self):
         # 存储前100个连接的客户端地址
@@ -41,8 +41,6 @@ class Collect:
                 self.connection_history_time.append({'client_address': client_address, 'time_stamp': start_time})
                 while len(self.connection_history_flow) > 100:
                     self.connection_history_flow.pop(0)  # 若列表超过100个元素，移除第一个（最早）元素
-            # print(f"duration:{duration}")
-            # print(f"byte_count: {len(encoded_message)}")
 
             # 当前节点连接次数connection_counter，基于流量,统计出当前client_address的出现次数，记录下来
             history_flow = self.connection_history_flow.copy()
@@ -63,7 +61,7 @@ class Collect:
             # print(f"host_count:{cc_flow}")
             # print(f"host_rate:{r1}")
 
-            # 当前节点连接错误次数error_counter，基于流量,统计出当前client_address的出现次数，记录下来
+            # 当前节点连接错误次数error_counter，基于流量,统计出当前 client_address 的出现次数，记录下来
             error_flow = self.connection_error_history_flow.copy()
             if len(self.connection_error_history_flow) > 100:
                 self.connection_error_history_flow.pop(0)  # 若列表超过100个元素，移除第一个（最早）元素
@@ -508,6 +506,26 @@ class Blockchain:
                     self.deal_54(received_data)
 
                 client_socket.close()
+            except json.JSONDecodeError as e:
+                if 'sender' not in received_data.keys():
+                    received_data['sender'] = ('unknown', 'unknown')
+                if 'identifier' not in received_data.keys():
+                    received_data['identifier'] = 0
+                if 'is_correct' not in received_data.keys():
+                    received_data['is_correct'] = 1
+                self.collect.collecting(self.oneself, client_address, start_time,
+                                encoded_message, True,
+                                received_data['identifier'], received_data["is_correct"])
+            except UnicodeDecodeError as e:
+                if 'sender' not in received_data.keys():
+                    received_data['sender'] = ('unknown', 'unknown')
+                if 'identifier' not in received_data.keys():
+                    received_data['identifier'] = 0
+                if 'is_correct' not in received_data.keys():
+                    received_data['is_correct'] = 1
+                self.collect.collecting(self.oneself, client_address, start_time,
+                                encoded_message, True,
+                                received_data['identifier'], received_data["is_correct"])
             except Exception as e:
                 print(encoded_message)
                 # 然后在使用前检查
@@ -519,7 +537,8 @@ class Blockchain:
                         received_data['identifier'] = 0
                     if 'is_correct' not in received_data.keys():
                         received_data['is_correct'] = 1
-                    self.collect.collecting(self.oneself, client_address=self.all_node[received_data['sender']], start_time=start_time, encoded_message=encoded_message, error=True, identifier=received_data['identifier'], is_correct=received_data["is_correct"])
+                    self.collect.collecting(self.oneself, client_address=self.all_node[received_data['sender']], start_time=start_time, encoded_message=encoded_message, error=True,
+                                            identifier=received_data['identifier'], is_correct=received_data["is_correct"])
                 else:
                     self.collect.collecting(self.oneself, client_address=('unknown', 'unknown'), start_time=start_time, encoded_message='', error=True,identifier=0, is_correct=1)
                 print(f"接收失败2: {e}")
@@ -772,3 +791,15 @@ class Blockchain:
 
 
 
+
+
+# # 打开或创建文件（以写入模式 'w'，会覆盖原有内容；或追加模式 'a'，在文件末尾添加内容）
+# with open("output.txt", "w") as output_file:
+#     # 写入数据
+#     output_file.write(data_to_write)
+#
+# # 如果是多行数据，可以使用换行符 '\n' 分隔
+# multiline_data = ["Line 1", "Line 2", "Line 3"]
+# with open("output.txt", "w") as output_file:
+#     for line in multiline_data:
+#         output_file.write(line + "\n")
